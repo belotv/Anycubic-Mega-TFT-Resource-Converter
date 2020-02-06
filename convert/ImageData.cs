@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -17,14 +17,14 @@ namespace convert
         {
             Path = path;
         }
-        private static ushort ReverseBytes(ushort value)
+        private static short ReverseBytes(short value)
         {
-            return ((value & 0xFFU) << 8 | (value & 0xFF00U) >> 8);
+            return (short)((value & 0xFFU) << 8 | (value & 0xFF00U) >> 8);
         }
 
-        private ushort[] ReadRGB565Pixels(Bitmap bmp)
+        private short[] ReadRGB565Pixels(Bitmap bmp)
         {
-            var result = new ushort[bmp.Width * bmp.Height];
+            var result = new short[bmp.Width * bmp.Height];
             var bits = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadOnly, bmp.PixelFormat);
             for (int y = 0; y < bmp.Height; y++)
             {
@@ -34,9 +34,9 @@ namespace convert
             return result;
         }
 
-        private ushort[] Compress(ushort[] pixels)
+        private short[] Compress(short[] pixels)
         {
-            var result = new ushort[pixels.Length];
+            var result = new short[pixels.Length];
             int dest = 0, src = 1;
             while (src < pixels.Length)
             {
@@ -48,7 +48,7 @@ namespace convert
             return result;
         }
 
-        public uint[] CompressImage()
+        public short[] CompressImage()
         {
             using (var newBmp = new Bitmap(Path))
             using (var bmp = newBmp.Clone(new Rectangle(0, 0, newBmp.Width, newBmp.Height), PixelFormat.Format16bppRgb565))
@@ -68,22 +68,16 @@ namespace convert
             Width = (ushort)result.Width;
             Height = (ushort)result.Height;
             int size = result.Width * result.Height, idx = 0;
-            var pixels = new ushort[size];
+            var pixels = new short[size];
             using (FileStream fs = new FileStream(Path, FileMode.Open, FileAccess.Read))
             using (BinaryReader br = new BinaryReader(fs))
             {
                 fs.Position = entry.Offset;
                 while (idx < size)
                 {
-                    var data = ReverseBytes(br.ReadUInt16());
-                    idx++;
-                    if (idx >= size)
-                    {
-                        lock (_consoleLock)
-                            Console.WriteLine($"WARNING! {entry.Id} image with expected size {size} overwrites itself by {reps - i} pixels!");
-                        break;
-                    }
-                    pixels[idx] = (ushort)(data);
+                    var data = ReverseBytes(br.ReadInt16());
+                    pixels[idx] = (short)(data);
+					idx++;
                 }
             }
             var bmp = result.LockBits(new Rectangle(0, 0, result.Width, result.Height), ImageLockMode.WriteOnly, result.PixelFormat);
