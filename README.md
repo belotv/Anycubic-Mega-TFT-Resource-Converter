@@ -8,8 +8,8 @@ This tool converts BMPDATA.BIN and TABLE.BIN to BMP images and vise versa. It al
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/awsmliBWBBg/0.jpg)](https://youtu.be/awsmliBWBBg "Proof of concept")
 
 # Limitations
-- only working with 03 version of display
-- the maximum size of embedded flash accessible through USB ia around 3.5MB. Although it might report 16MB, actual chip size is 4MB
+- works with version of display older than 03. For version 03, use https://github.com/b-desconocido/Anycubic-Mega-TFT-Resource-Converter
+- the maximum size of embedded flash accessible through USB is 16MB
 - you can't resize images above the limit 480(W)x320(H)
 - you can't remove or add new bitmaps
 - if you want to rename a file, you must keep the first number and first underscore at the beggining of the file
@@ -37,4 +37,4 @@ Use it at your own risk! It might damage your display, making it unusable, catch
 - re-plug the display and enjoy chages you've made
 
 # Binaries
-You can get executable [here](https://github.com/b-desconocido/Anycubic-Mega-TFT-Resource-Converter/releases)
+You can get executable [here](https://github.com/belotv/Anycubic-Mega-TFT-Resource-Converter/releases)
