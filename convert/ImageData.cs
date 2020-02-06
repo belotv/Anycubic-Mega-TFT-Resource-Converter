@@ -8,9 +8,6 @@ namespace convert
 {
     class ImageData
     {
-        const uint RepetitionMask = 0x3FFFU;
-        const uint RunLengthMax = RepetitionMask;
-
         private readonly object _consoleLock = new object();
         public string Path { get; private set; }
         public ushort Width { get; private set; }
@@ -20,19 +17,14 @@ namespace convert
         {
             Path = path;
         }
-        private static uint ReverseBytes(uint value)
+        private static ushort ReverseBytes(ushort value)
         {
-            return (value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 | (value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24;
+            return ((value & 0xFFU) << 8 | (value & 0xFF00U) >> 8);
         }
 
-        private static uint EncodePixel(short color, int num)
+        private ushort[] ReadRGB565Pixels(Bitmap bmp)
         {
-            return ReverseBytes((uint)((num & RepetitionMask) | ((uint)color << 16 | ((uint)color << 28 >> 12) & ~RepetitionMask)));
-        }
-
-        private short[] ReadRGB565Pixels(Bitmap bmp)
-        {
-            var result = new short[bmp.Width * bmp.Height];
+            var result = new ushort[bmp.Width * bmp.Height];
             var bits = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadOnly, bmp.PixelFormat);
             for (int y = 0; y < bmp.Height; y++)
             {
@@ -42,21 +34,16 @@ namespace convert
             return result;
         }
 
-        private uint[] Compress(short[] pixels)
+        private ushort[] Compress(ushort[] pixels)
         {
-            var result = new uint[pixels.Length];
-            int reps = 1, dest = 0, src = 1;
+            var result = new ushort[pixels.Length];
+            int dest = 0, src = 1;
             while (src < pixels.Length)
             {
-                if (pixels[src] != pixels[src - 1] || reps == RunLengthMax)
-                {
-                    result[dest++] = EncodePixel(pixels[src - 1], reps);
-                    reps = 0;
-                }
-                reps++;
+                result[dest++] = ReverseBytes(pixels[src - 1]);
                 src++;
             }
-            result[dest++] = EncodePixel(pixels[pixels.Length - 1], reps);
+            result[dest++] = ReverseBytes(pixels[pixels.Length - 1]);
             Array.Resize(ref result, dest);
             return result;
         }
@@ -81,25 +68,22 @@ namespace convert
             Width = (ushort)result.Width;
             Height = (ushort)result.Height;
             int size = result.Width * result.Height, idx = 0;
-            var pixels = new short[size];
+            var pixels = new ushort[size];
             using (FileStream fs = new FileStream(Path, FileMode.Open, FileAccess.Read))
             using (BinaryReader br = new BinaryReader(fs))
             {
                 fs.Position = entry.Offset;
                 while (idx < size)
                 {
-                    var data = ReverseBytes(br.ReadUInt32());
-                    var reps = data & RepetitionMask;
-                    for (uint i = 0; i < reps; i++, idx++)
+                    var data = ReverseBytes(br.ReadUInt16());
+                    idx++;
+                    if (idx >= size)
                     {
-                        if (idx >= size)
-                        {
-                            lock (_consoleLock)
-                                Console.WriteLine($"WARNING! {entry.Id} image with expected size {size} overwrites itself by {reps - i} pixels!");
-                            break;
-                        }
-                        pixels[idx] = (short)((data >> 16) | (data << 12 >> 28));
+                        lock (_consoleLock)
+                            Console.WriteLine($"WARNING! {entry.Id} image with expected size {size} overwrites itself by {reps - i} pixels!");
+                        break;
                     }
+                    pixels[idx] = (ushort)(data);
                 }
             }
             var bmp = result.LockBits(new Rectangle(0, 0, result.Width, result.Height), ImageLockMode.WriteOnly, result.PixelFormat);
