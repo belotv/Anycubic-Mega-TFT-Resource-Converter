@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing.Imaging;
 using System.Globalization;
@@ -17,7 +17,7 @@ namespace convert
         const string DescriptorsTableFileName = "TABLE.BIN";
         const string OptimizeKey = "-o";
         const string IgnoreConstraitsKey = "-f";
-        const int MaxBitmapSize = 3500000;
+        const int MaxBitmapSize = 32000000;
         const int NumFilesRequired = 603;
         enum Role { Encoder, Decoder, Invalid };
         static Role GetRole(string dir)
@@ -98,63 +98,6 @@ namespace convert
             using (BinaryWriter bwTable = new BinaryWriter(fsTable))
             using (BinaryWriter bwImage = new BinaryWriter(fsImage))
             {
-                if (optimize)
-                {
-                    var numBytesSaved = 0;
-                    try
-                    {
-                        var images = files.Select(file =>
-                        {
-                            var img = new ImageData(file.Path);
-                            var data = img.CompressImage();
-                            return new { Id = file.Identifier, Img = img, Data = data };
-                        }).ToList();
-                        var table = new TableEntry[images.Count];
-                        for (int i = 0, j = 0; i < images.Count; i++)
-                        {
-                            var found = false;
-                            var id = images[i].Id;
-                            var img = images[i].Img;
-                            var data = images[i].Data;
-                            for (j = 0; j < i; j++)
-                            {
-                                var oimg = images[j].Img;
-                                var odata = images[j].Data;
-                                if (oimg.Width == img.Width && oimg.Height == img.Height && odata.SequenceEqual(data))
-                                {
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if (i == 0 || !found) // first or not found
-                            {
-                                var entry = new TableEntry(id, img.Width, img.Height, curOffset);
-                                table[i] = entry;
-                                entry.Write(bwTable);
-                                for (int k = 0; k < data.Length; k++)
-                                {
-                                    bwImage.Write(data[k]);
-                                }
-                                curOffset += (uint)(data.Length * 4);
-                            }
-                            else
-                            {
-                                var entry = new TableEntry(id, img.Width, img.Height, table[j].Offset);
-                                table[i] = entry;
-                                entry.Write(bwTable);
-                                numBytesSaved += data.Length * 4;
-                            }
-                        }
-                        Console.WriteLine($"Saved {numBytesSaved} bytes!");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"ERROR! Failed to compress!{Environment.NewLine}{ex}");
-                        result = false;
-                    }
-                }
-                else
-                {
                     foreach (var file in files)
                     {
                         try
@@ -170,20 +113,23 @@ namespace convert
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"ERROR! Failed to compress a file {file.Path}!{Environment.NewLine}{ex}");
+                            Console.WriteLine(string.Format("ERROR! Failed to compress file {0}!{1}{2}", file.Path, Environment.NewLine, ex));
                             result = false;
                             break;
                         }
-                    }
-                }   
+                    } 
             }
             if (!ignoreConstraits && curOffset >= MaxBitmapSize)
             {
-                Console.WriteLine($"ERROR! Output file is too big {curOffset}, max {MaxBitmapSize} bytes!");
+                Console.WriteLine(string.Format("ERROR! Output file is too big {0}, max {1} bytes!", curOffset, MaxBitmapSize));
                 File.Delete(Path.Combine(outputDir, DescriptorsTableFileName));
                 File.Delete(Path.Combine(outputDir, BitmapDataFileName));
             }
-            Console.WriteLine($"Encoding {(result ? "finished" : "failed")}");
+			if (result){
+				            Console.WriteLine("Encoding finished");
+			} else {
+							Console.WriteLine("Encoding failed");
+			}
         }
 
         private static void DecodeBitmaps(string inputDirectory, bool ignoreConstraits)
@@ -196,15 +142,18 @@ namespace convert
             {
                 try
                 {
-                    imgData.LoadBitmap(entry).Save(Path.Combine(dir, $"{entry.Id}_{entry.Width}x{entry.Height}.bmp"), ImageFormat.Bmp);
+                    imgData.LoadBitmap(entry).Save(Path.Combine(dir, string.Format("{0}_{1}x{2}.bmp", entry.Id, entry.Width, entry.Height)), ImageFormat.Bmp);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"ERROR! Failed to convert a file with id {entry.Id}!{Environment.NewLine}{ex}");
+                    Console.WriteLine(string.Format("ERROR! Failed to convert file {0}!{1}{2}", entry.Id, Environment.NewLine, ex));
                     result = false;
                 }
             });
-            Console.WriteLine($"Decoding {(result ? "finished" : "failed")}");
-        }
+			if (result){
+				            Console.WriteLine("Decoding finished");
+			} else {
+							Console.WriteLine("Decoding failed");
+			}        }
     }
 }
