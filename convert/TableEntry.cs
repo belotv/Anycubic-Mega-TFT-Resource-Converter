@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 
 namespace convert
 {
@@ -31,7 +31,7 @@ namespace convert
 
         public override string ToString()
         {
-            return $"[{Id}] {Width}x{Height} at {Offset}";
+            return string.Format("[{0}] {1}x{2} at {3}", Id, Width, Height, Offset);
         }
 
         private TableEntry() { }
